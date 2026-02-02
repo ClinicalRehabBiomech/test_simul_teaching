@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PE Simulation Demo — Motor Problem / Space / Rules</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121a33; --muted:#9fb0d0; --text:#eaf0ff;
+      --accent:#7aa6ff; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
+      --border:rgba(255,255,255,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 20% 0%, rgba(122,166,255,.18), transparent 60%),
+                  radial-gradient(1000px 700px at 80% 10%, rgba(52,211,153,.12), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding:18px 16px;
+      border-bottom:1px solid var(--border);
+      background:rgba(18,26,51,.55);
+      backdrop-filter: blur(6px);
+      position:sticky; top:0;
+    }
+    header h1{margin:0; font-size:18px; letter-spacing:.2px}
+    header p{margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.35}
+    main{max-width:1100px; margin:0 auto; padding:16px}
+    .grid{display:grid; grid-template-columns: 1.1fr .9fr; gap:14px}
+    @media (max-width: 920px){ .grid{grid-template-columns: 1fr} }
+    .card{
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:rgba(18,26,51,.78);
+      box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      padding:14px;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    label{display:block; font-size:12px; color:var(--muted); margin:8px 0 6px}
+    select, input, textarea{
+      width:100%;
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:10px 10px;
+      background:rgba(11,16,32,.55);
+      color:var(--text);
+      outline:none;
+    }
+    textarea{min-height:120px; resize:vertical}
+    .btn{
+      appearance:none; border:none;
+      border-radius:12px;
+      padding:10px 12px;
+      background: linear-gradient(135deg, rgba(122,166,255,.9), rgba(122,166,255,.55));
+      color:#071022;
+      font-weight:700;
+      cursor:pointer;
+    }
+    .btn.secondary{
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      border:1px solid var(--border);
+      font-weight:600;
+    }
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding:6px 10px; border:1px solid var(--border);
+      border-radius:999px; color:var(--muted); font-size:12px;
+      background:rgba(11,16,32,.35);
+      margin:6px 6px 0 0;
+    }
+    .score{
+      font-size:28px; font-weight:800; letter-spacing:.5px;
+      margin:6px 0 0;
+    }
+    .kpi{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+    .kpi .box{
+      flex:1; min-width:160px;
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:10px;
+      background:rgba(11,16,32,.35);
+    }
+    .box h3{margin:0 0 6px; font-size:12px; color:var(--muted); font-weight:600}
+    .box p{margin:0; font-size:13px; line-height:1.35}
+    .tag{display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; margin-right:6px}
+    .tag.ok{background:rgba(52,211,153,.18); color:var(--ok); border:1px solid rgba(52,211,153,.28)}
+    .tag.warn{background:rgba(251,191,36,.18); color:var(--warn); border:1px solid rgba(251,191,36,.28)}
+    .tag.bad{background:rgba(251,113,133,.18); color:var(--bad); border:1px solid rgba(251,113,133,.28)}
+    .small{color:var(--muted); font-size:12px; line-height:1.35}
+    .hr{height:1px; background:var(--border); margin:12px 0}
+    details{border:1px solid var(--border); border-radius:12px; padding:10px; background:rgba(11,16,32,.25)}
+    details summary{cursor:pointer; color:var(--muted); font-size:13px}
+    code.inline{background:rgba(255,255,255,.08); padding:2px 6px; border-radius:8px}
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>PE Simulation Demo — “Problem • Space • Rules”</h1>
+  <p>
+    Demo για παρουσίαση σε συνεργάτες: μετά από κάθε θεωρητική ενότητα, ο εκπαιδευόμενος λύνει ένα σύντομο σενάριο.
+    Το “LLM” εδώ είναι <b>mini-model</b> με rubric + κανόνες, ώστε οι “σωστές απαντήσεις” να είναι ελέγξιμες.
+  </p>
+</header>
+
+<main>
+  <div class="grid">
+    <section class="card">
+      <h2 style="margin:0 0 8px;font-size:16px;">1) Scenario Setup</h2>
+      <div class="row">
+        <div style="flex:1; min-width:240px;">
+          <label>Ενότητα / Άξονας</label>
+          <select id="axis">
+            <option value="motor_problem">Μάθημα 1 — Κινητικό Πρόβλημα (διατύπωση)</option>
+            <option value="space_system">Μάθημα 2 — Χώρος ως Σύστημα (πρόβλεψη συμπεριφοράς)</option>
+            <option value="rules_roles">Μάθημα 3 — Κανόνες & Ρόλοι (παρέμβαση/οργάνωση)</option>
+          </select>
+        </div>
+        <div style="flex:1; min-width:240px;">
+          <label>Σενάριο</label>
+          <select id="scenario"></select>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h2 style="margin:0 0 6px;font-size:16px;">2) Candidate Response</h2>
+      <p class="small" id="promptText"></p>
+
+      <label>Απάντηση (2–6 προτάσεις)</label>
+      <textarea id="answer" placeholder="Γράψε τι θα έκανες / τι θα περίμενες / πώς το διατυπώνεις..."></textarea>
+
+      <div class="row" style="margin-top:10px; align-items:center;">
+        <button class="btn" id="gradeBtn">Αξιολόγηση (Simulation)</button>
+        <button class="btn secondary" id="hintBtn">Hint</button>
+        <button class="btn secondary" id="resetBtn">Καθαρισμός</button>
+        <span class="small" id="status"></span>
+      </div>
+
+      <div class="hr"></div>
+
+      <details>
+        <summary>Τι είναι αυτό το “LLM free” evaluator;</summary>
+        <div class="small" style="margin-top:8px;">
+          Χρησιμοποιεί rubric (κριτήρια) + keyword/semantic heuristics για να βαθμολογεί με σταθερότητα.
+          Δεν “εφευρίσκει αλήθειες”. Δίνει feedback & hints. Έτσι ελέγχεις τι θεωρείται “σωστό”.
+        </div>
+      </details>
+    </section>
+
+    <aside class="card">
+      <h2 style="margin:0 0 8px;font-size:16px;">Simulation Output</h2>
+
+      <div class="pill"><span>Σκορ</span> <span class="inline" id="scoreBadge" style="font-weight:700;color:var(--accent)">—</span></div>
+      <div class="score" id="scoreText">—</div>
+      <div class="small" id="scoreNote">Σκορ βάσει rubric (όχι “από μοντέλο”).</div>
+
+      <div class="kpi">
+        <div class="box">
+          <h3>Σύνοψη</h3>
+          <p id="summary">—</p>
+        </div>
+        <div class="box">
+          <h3>Τι πήγε καλά</h3>
+          <p id="good">—</p>
+        </div>
+        <div class="box">
+          <h3>Τι λείπει / τι να βελτιώσεις</h3>
+          <p id="missing">—</p>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <h3 style="margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:600;">Rubric Trace (για έλεγχο ορθότητας)</h3>
+      <div id="trace" class="small">—</div>
+
+      <div class="hr"></div>
+
+      <div class="small">
+        <span class="tag ok">OK</span> πληροί κριτήριο<br/>
+        <span class="tag warn">PARTIAL</span> μερική κάλυψη<br/>
+        <span class="tag bad">RISK</span> πιθανός αποκλεισμός/λάθος κατεύθυνση (π.χ. “βγαίνει έξω”)
+      </div>
+    </aside>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <h2 style="margin:0 0 6px;font-size:16px;">Quick Demo Mode</h2>
+    <p class="small">
+      Για παρουσίαση: πάτα <code class="inline">Hint</code> → θα σου δείξει ένα “καλό μοτίβο σκέψης” χωρίς να δώσει “μία σωστή λύση”.
+      Μετά γράψε απάντηση και πάτα <code class="inline">Αξιολόγηση</code>.
+    </p>
+  </div>
+</main>
+
+<script src="./mini_llm.js"></script>
+<script>
+  // UI wiring
+  const axisEl = document.getElementById('axis');
+  const scenarioEl = document.getElementById('scenario');
+  const promptText = document.getElementById('promptText');
+  const answerEl = document.getElementById('answer');
+  const statusEl = document.getElementById('status');
+
+  const scoreBadge = document.getElementById('scoreBadge');
+  const scoreText = document.getElementById('scoreText');
+  const summaryEl = document.getElementById('summary');
+  const goodEl = document.getElementById('good');
+  const missingEl = document.getElementById('missing');
+  const traceEl = document.getElementById('trace');
+
+  function loadScenarios(){
+    scenarioEl.innerHTML = "";
+    const axis = axisEl.value;
+    const scenarios = MiniLLM.getScenarios(axis);
+    for (const s of scenarios){
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.title;
+      scenarioEl.appendChild(opt);
+    }
+    renderPrompt();
+  }
+
+  function renderPrompt(){
+    const axis = axisEl.value;
+    const scenarioId = scenarioEl.value;
+    const s = MiniLLM.getScenario(axis, scenarioId);
+    promptText.textContent = s.prompt;
+    answerEl.value = "";
+    clearOutput();
+  }
+
+  function clearOutput(){
+    scoreBadge.textContent = "—";
+    scoreText.textContent = "—";
+    summaryEl.textContent = "—";
+    goodEl.textContent = "—";
+    missingEl.textContent = "—";
+    traceEl.innerHTML = "—";
+    statusEl.textContent = "";
+  }
+
+  function renderTrace(trace){
+    const lines = trace.map(t => {
+      const cls = t.level === "OK" ? "ok" : (t.level === "PARTIAL" ? "warn" : "bad");
+      return `<div style="margin:6px 0">
+        <span class="tag ${cls}">${t.level}</span>
+        <b style="color:var(--text)">${t.criterion}</b><br/>
+        <span style="color:var(--muted)">${t.note}</span>
+      </div>`;
+    }).join("");
+    traceEl.innerHTML = lines || "—";
+  }
+
+  document.getElementById('gradeBtn').addEventListener('click', () => {
+    const axis = axisEl.value;
+    const scenarioId = scenarioEl.value;
+    const text = answerEl.value.trim();
+
+    if (text.length < 12){
+      statusEl.textContent = "Γράψε λίγο πιο αναλυτικά (τουλάχιστον 2–3 προτάσεις).";
+      return;
+    }
+    statusEl.textContent = "Αξιολόγηση…";
+
+    const out = MiniLLM.grade(axis, scenarioId, text);
+
+    scoreBadge.textContent = out.score + "/10";
+    scoreText.textContent = out.score.toFixed(1);
+    summaryEl.textContent = out.summary;
+    goodEl.textContent = out.good.join(" • ") || "—";
+    missingEl.textContent = out.missing.join(" • ") || "—";
+    renderTrace(out.trace);
+
+    statusEl.textContent = "Έτοιμο.";
+  });
+
+  document.getElementById('hintBtn').addEventListener('click', () => {
+    const axis = axisEl.value;
+    const scenarioId = scenarioEl.value;
+    const hint = MiniLLM.hint(axis, scenarioId);
+    answerEl.value = hint;
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    answerEl.value = "";
+    clearOutput();
+  });
+
+  axisEl.addEventListener('change', loadScenarios);
+  scenarioEl.addEventListener('change', renderPrompt);
+
+  // init
+  loadScenarios();
+</script>
+</body>
+</html>
