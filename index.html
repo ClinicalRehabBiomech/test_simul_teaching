@@ -3,300 +3,478 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>PE Simulation Demo — Motor Problem / Space / Rules</title>
+  <title>PE Simulation Demo — Problem • Space • Rules (LLM-free)</title>
   <style>
     :root{
-      --bg:#0b1020; --card:#121a33; --muted:#9fb0d0; --text:#eaf0ff;
-      --accent:#7aa6ff; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
-      --border:rgba(255,255,255,.08);
+      --bg:#0b1020; --card:#121a33; --card2:#0f1730; --text:#eaf0ff; --muted:#b7c2ff;
+      --ok:#46f2a1; --warn:#ffd166; --bad:#ff5c7a; --line:rgba(255,255,255,.10);
+      --btn:#22305f; --btn2:#1a2550;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
-    *{box-sizing:border-box}
-    body{
-      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: radial-gradient(1200px 800px at 20% 0%, rgba(122,166,255,.18), transparent 60%),
-                  radial-gradient(1000px 700px at 80% 10%, rgba(52,211,153,.12), transparent 55%),
-                  var(--bg);
-      color:var(--text);
-    }
-    header{
-      padding:18px 16px;
-      border-bottom:1px solid var(--border);
-      background:rgba(18,26,51,.55);
-      backdrop-filter: blur(6px);
-      position:sticky; top:0;
-    }
-    header h1{margin:0; font-size:18px; letter-spacing:.2px}
-    header p{margin:6px 0 0; color:var(--muted); font-size:13px; line-height:1.35}
-    main{max-width:1100px; margin:0 auto; padding:16px}
-    .grid{display:grid; grid-template-columns: 1.1fr .9fr; gap:14px}
-    @media (max-width: 920px){ .grid{grid-template-columns: 1fr} }
-    .card{
-      border:1px solid var(--border);
-      border-radius:14px;
-      background:rgba(18,26,51,.78);
-      box-shadow: 0 12px 40px rgba(0,0,0,.25);
-      padding:14px;
-    }
-    .row{display:flex; gap:10px; flex-wrap:wrap}
-    label{display:block; font-size:12px; color:var(--muted); margin:8px 0 6px}
+    body{margin:0; font-family:var(--sans); background:radial-gradient(1200px 700px at 20% 0%, #1a2a66 0%, var(--bg) 55%); color:var(--text);}
+    header{padding:18px 16px; border-bottom:1px solid var(--line); background:rgba(0,0,0,.10); backdrop-filter: blur(6px);}
+    h1{margin:0; font-size:18px; font-weight:700;}
+    .sub{margin-top:6px; color:var(--muted); font-size:13px; line-height:1.35;}
+    main{max-width:1040px; margin:0 auto; padding:16px;}
+    .grid{display:grid; grid-template-columns: 330px 1fr; gap:14px;}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid var(--line); border-radius:14px; padding:14px;}
+    .card h2{margin:0 0 8px 0; font-size:14px;}
+    .muted{color:var(--muted); font-size:13px; line-height:1.4;}
+    label{display:block; font-size:12px; color:var(--muted); margin:10px 0 6px;}
     select, input, textarea{
-      width:100%;
-      border:1px solid var(--border);
-      border-radius:10px;
-      padding:10px 10px;
-      background:rgba(11,16,32,.55);
-      color:var(--text);
+      width:100%; box-sizing:border-box; padding:10px 10px; border-radius:10px;
+      border:1px solid var(--line); background:rgba(0,0,0,.18); color:var(--text);
       outline:none;
     }
-    textarea{min-height:120px; resize:vertical}
-    .btn{
-      appearance:none; border:none;
-      border-radius:12px;
-      padding:10px 12px;
-      background: linear-gradient(135deg, rgba(122,166,255,.9), rgba(122,166,255,.55));
-      color:#071022;
-      font-weight:700;
-      cursor:pointer;
+    textarea{min-height:110px; resize:vertical; line-height:1.35;}
+    .row{display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    .btns{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;}
+    button{
+      border:1px solid var(--line); background:linear-gradient(180deg, var(--btn), var(--btn2));
+      color:var(--text); padding:10px 12px; border-radius:12px; font-weight:650; cursor:pointer;
     }
-    .btn.secondary{
-      background:rgba(255,255,255,.08);
-      color:var(--text);
-      border:1px solid var(--border);
-      font-weight:600;
-    }
-    .pill{
-      display:inline-flex; gap:8px; align-items:center;
-      padding:6px 10px; border:1px solid var(--border);
-      border-radius:999px; color:var(--muted); font-size:12px;
-      background:rgba(11,16,32,.35);
-      margin:6px 6px 0 0;
-    }
-    .score{
-      font-size:28px; font-weight:800; letter-spacing:.5px;
-      margin:6px 0 0;
-    }
-    .kpi{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
-    .kpi .box{
-      flex:1; min-width:160px;
-      border:1px solid var(--border);
-      border-radius:12px;
-      padding:10px;
-      background:rgba(11,16,32,.35);
-    }
-    .box h3{margin:0 0 6px; font-size:12px; color:var(--muted); font-weight:600}
-    .box p{margin:0; font-size:13px; line-height:1.35}
-    .tag{display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; margin-right:6px}
-    .tag.ok{background:rgba(52,211,153,.18); color:var(--ok); border:1px solid rgba(52,211,153,.28)}
-    .tag.warn{background:rgba(251,191,36,.18); color:var(--warn); border:1px solid rgba(251,191,36,.28)}
-    .tag.bad{background:rgba(251,113,133,.18); color:var(--bad); border:1px solid rgba(251,113,133,.28)}
-    .small{color:var(--muted); font-size:12px; line-height:1.35}
-    .hr{height:1px; background:var(--border); margin:12px 0}
-    details{border:1px solid var(--border); border-radius:12px; padding:10px; background:rgba(11,16,32,.25)}
-    details summary{cursor:pointer; color:var(--muted); font-size:13px}
-    code.inline{background:rgba(255,255,255,.08); padding:2px 6px; border-radius:8px}
+    button.secondary{background:rgba(0,0,0,.15); font-weight:600;}
+    button:disabled{opacity:.6; cursor:not-allowed;}
+    .pill{display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid var(--line); background:rgba(0,0,0,.14); font-size:12px; color:var(--muted);}
+    .kpi{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;}
+    .kpi .pill b{color:var(--text); font-family:var(--mono); font-weight:800;}
+    .hr{height:1px; background:var(--line); margin:12px 0;}
+    .answerBox{border:1px dashed var(--line); border-radius:12px; padding:12px; background:rgba(0,0,0,.12);}
+    .score{font-family:var(--mono); font-weight:900; font-size:18px;}
+    .tag{font-family:var(--mono); font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--line); background:rgba(0,0,0,.14);}
+    .ok{color:var(--ok);} .warn{color:var(--warn);} .bad{color:var(--bad);}
+    .small{font-size:12px; color:var(--muted); line-height:1.35;}
+    .list{margin:8px 0 0 18px; color:var(--muted); font-size:13px; line-height:1.45;}
+    .mono{font-family:var(--mono);}
+    footer{opacity:.8; padding:18px 16px; text-align:center; color:var(--muted); font-size:12px;}
+    @media (max-width: 920px){ .grid{grid-template-columns: 1fr;} }
   </style>
 </head>
 
 <body>
 <header>
-  <h1>PE Simulation Demo — “Problem • Space • Rules”</h1>
-  <p>
-    Demo για παρουσίαση σε συνεργάτες: μετά από κάθε θεωρητική ενότητα, ο εκπαιδευόμενος λύνει ένα σύντομο σενάριο.
-    Το “LLM” εδώ είναι <b>mini-model</b> με rubric + κανόνες, ώστε οι “σωστές απαντήσεις” να είναι ελέγξιμες.
-  </p>
+  <h1>Simulation Demo — «Πρόβλημα • Χώρος • Κανόνες» (LLM-free rubric)</h1>
+  <div class="sub">
+    Demo για πρόταση σε συνεργάτες: 3 άξονες, μικρά σενάρια, rubric scoring, και feedback “σαν LLM” χωρίς πραγματικό LLM.
+    <span class="pill">No data from children</span>
+    <span class="pill">Local only</span>
+    <span class="pill">Deterministic scoring</span>
+  </div>
 </header>
 
 <main>
   <div class="grid">
     <section class="card">
-      <h2 style="margin:0 0 8px;font-size:16px;">1) Scenario Setup</h2>
+      <h2>Ρυθμίσεις Σεναρίου</h2>
+
+      <label>Άξονας / Μάθημα</label>
+      <select id="axisSel">
+        <option value="m1">1) Κινητικό Πρόβλημα</option>
+        <option value="m2">2) Χώρος ως Σύστημα</option>
+        <option value="m3">3) Κανόνες & Ρόλοι</option>
+      </select>
+
       <div class="row">
-        <div style="flex:1; min-width:240px;">
-          <label>Ενότητα / Άξονας</label>
-          <select id="axis">
-            <option value="motor_problem">Μάθημα 1 — Κινητικό Πρόβλημα (διατύπωση)</option>
-            <option value="space_system">Μάθημα 2 — Χώρος ως Σύστημα (πρόβλεψη συμπεριφοράς)</option>
-            <option value="rules_roles">Μάθημα 3 — Κανόνες & Ρόλοι (παρέμβαση/οργάνωση)</option>
+        <div>
+          <label>Τάξη / Ηλικία</label>
+          <select id="ageSel">
+            <option value="primary">Δημοτικό</option>
+            <option value="gymnasium">Γυμνάσιο</option>
+            <option value="lyceum">Λύκειο</option>
           </select>
         </div>
-        <div style="flex:1; min-width:240px;">
-          <label>Σενάριο</label>
-          <select id="scenario"></select>
+        <div>
+          <label>Αριθμός μαθητών</label>
+          <input id="nInput" type="number" min="8" max="30" value="22"/>
         </div>
       </div>
 
-      <div class="hr"></div>
+      <div class="row">
+        <div>
+          <label>Χώρος</label>
+          <select id="spaceSel">
+            <option value="open_big">Μεγάλο ανοιχτό προαύλιο</option>
+            <option value="open_small">Μικρό ανοιχτό προαύλιο</option>
+            <option value="corridor">Στενός διάδρομος/ζώνη</option>
+            <option value="zoned">Ζωνοποιημένος χώρος (2–3 ζώνες)</option>
+          </select>
+        </div>
+        <div>
+          <label>Εξοπλισμός</label>
+          <select id="equipSel">
+            <option value="none">Χωρίς εξοπλισμό</option>
+            <option value="one_ball">1 μπάλα</option>
+            <option value="two_balls">2 μπάλες</option>
+            <option value="cones">Κώνοι/σημάδια</option>
+          </select>
+        </div>
+      </div>
 
-      <h2 style="margin:0 0 6px;font-size:16px;">2) Candidate Response</h2>
-      <p class="small" id="promptText"></p>
+      <label>Περιορισμοί (constraints)</label>
+      <select id="constraintSel" multiple size="5">
+        <option value="no_running">Χωρίς τρέξιμο</option>
+        <option value="no_talking">Χωρίς ομιλία</option>
+        <option value="no_elimination">Χωρίς αποκλεισμό/“βγαίνω έξω”</option>
+        <option value="arrive_together">Να φτάσουν όλοι μαζί</option>
+        <option value="no_leader">Χωρίς αρχηγό/εντολές</option>
+      </select>
+      <div class="small">Tip: κρατά Ctrl/⌘ για πολλαπλή επιλογή.</div>
 
-      <label>Απάντηση (2–6 προτάσεις)</label>
-      <textarea id="answer" placeholder="Γράψε τι θα έκανες / τι θα περίμενες / πώς το διατυπώνεις..."></textarea>
+      <label>Διδακτικός στόχος (π.χ. συνεργασία, ρυθμός, ασφάλεια)</label>
+      <input id="goalInput" value="συνεργασία & ρύθμιση ρυθμού"/>
 
-      <div class="row" style="margin-top:10px; align-items:center;">
-        <button class="btn" id="gradeBtn">Αξιολόγηση (Simulation)</button>
-        <button class="btn secondary" id="hintBtn">Hint</button>
-        <button class="btn secondary" id="resetBtn">Καθαρισμός</button>
-        <span class="small" id="status"></span>
+      <div class="btns">
+        <button id="newBtn">Νέο σενάριο</button>
+        <button id="hintBtn" class="secondary">Hint</button>
+        <button id="resetBtn" class="secondary">Reset</button>
       </div>
 
       <div class="hr"></div>
-
-      <details>
-        <summary>Τι είναι αυτό το “LLM free” evaluator;</summary>
-        <div class="small" style="margin-top:8px;">
-          Χρησιμοποιεί rubric (κριτήρια) + keyword/semantic heuristics για να βαθμολογεί με σταθερότητα.
-          Δεν “εφευρίσκει αλήθειες”. Δίνει feedback & hints. Έτσι ελέγχεις τι θεωρείται “σωστό”.
-        </div>
-      </details>
+      <div class="muted">
+        <b>Πώς “ελέγχουμε την ορθότητα” εδώ:</b><br/>
+        Οι σωστές/αναμενόμενες απαντήσεις δεν προέρχονται από μοντέλο. Προέρχονται από rubric + κανόνες ελέγχου.
+        Το “assistant” απλώς εξηγεί με σταθερό τρόπο τι βρέθηκε/τι λείπει.
+      </div>
     </section>
 
-    <aside class="card">
-      <h2 style="margin:0 0 8px;font-size:16px;">Simulation Output</h2>
+    <section class="card">
+      <h2>Simulation / Τεστ</h2>
+      <div id="scenarioBox" class="answerBox"></div>
 
-      <div class="pill"><span>Σκορ</span> <span class="inline" id="scoreBadge" style="font-weight:700;color:var(--accent)">—</span></div>
-      <div class="score" id="scoreText">—</div>
-      <div class="small" id="scoreNote">Σκορ βάσει rubric (όχι “από μοντέλο”).</div>
+      <label>Η απάντησή σου</label>
+      <textarea id="answerTA" placeholder="Γράψε 3–6 προτάσεις."></textarea>
 
-      <div class="kpi">
-        <div class="box">
-          <h3>Σύνοψη</h3>
-          <p id="summary">—</p>
-        </div>
-        <div class="box">
-          <h3>Τι πήγε καλά</h3>
-          <p id="good">—</p>
-        </div>
-        <div class="box">
-          <h3>Τι λείπει / τι να βελτιώσεις</h3>
-          <p id="missing">—</p>
-        </div>
+      <div class="btns">
+        <button id="gradeBtn">Βαθμολόγηση</button>
+        <button id="showRubricBtn" class="secondary">Δείξε rubric</button>
       </div>
 
-      <div class="hr"></div>
-
-      <h3 style="margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:600;">Rubric Trace (για έλεγχο ορθότητας)</h3>
-      <div id="trace" class="small">—</div>
+      <div class="kpi" id="kpiBox"></div>
 
       <div class="hr"></div>
-
-      <div class="small">
-        <span class="tag ok">OK</span> πληροί κριτήριο<br/>
-        <span class="tag warn">PARTIAL</span> μερική κάλυψη<br/>
-        <span class="tag bad">RISK</span> πιθανός αποκλεισμός/λάθος κατεύθυνση (π.χ. “βγαίνει έξω”)
-      </div>
-    </aside>
-  </div>
-
-  <div class="card" style="margin-top:14px;">
-    <h2 style="margin:0 0 6px;font-size:16px;">Quick Demo Mode</h2>
-    <p class="small">
-      Για παρουσίαση: πάτα <code class="inline">Hint</code> → θα σου δείξει ένα “καλό μοτίβο σκέψης” χωρίς να δώσει “μία σωστή λύση”.
-      Μετά γράψε απάντηση και πάτα <code class="inline">Αξιολόγηση</code>.
-    </p>
+      <div id="feedbackBox" class="answerBox"></div>
+    </section>
   </div>
 </main>
 
-<script src="./mini_llm.js"></script>
+<footer>
+  Demo HTML + JS (LLM-free). Μπορεί να ανέβει σε GitHub Pages ως στατικό site.
+</footer>
+
 <script>
-  // UI wiring
-  const axisEl = document.getElementById('axis');
-  const scenarioEl = document.getElementById('scenario');
-  const promptText = document.getElementById('promptText');
-  const answerEl = document.getElementById('answer');
-  const statusEl = document.getElementById('status');
+/** ---------------------------
+ *  LLM-free "Evaluator Engine"
+ *  - deterministic scoring based on rubric & keyword families
+ *  - assistant-like feedback without any model
+ * --------------------------- */
 
-  const scoreBadge = document.getElementById('scoreBadge');
-  const scoreText = document.getElementById('scoreText');
-  const summaryEl = document.getElementById('summary');
-  const goodEl = document.getElementById('good');
-  const missingEl = document.getElementById('missing');
-  const traceEl = document.getElementById('trace');
+const $ = (id) => document.getElementById(id);
 
-  function loadScenarios(){
-    scenarioEl.innerHTML = "";
-    const axis = axisEl.value;
-    const scenarios = MiniLLM.getScenarios(axis);
-    for (const s of scenarios){
-      const opt = document.createElement('option');
-      opt.value = s.id;
-      opt.textContent = s.title;
-      scenarioEl.appendChild(opt);
-    }
-    renderPrompt();
+const KEY = {
+  dominance: ["κυριαρχ", "οι γρήγοροι", "οι δυνατο", "domin", "πρωταγωνιστ", "μονοπωλ"],
+  periphery: ["άκρη", "περιθωρ", "αποσύρ", "δεν συμμετ", "μένουν έξω", "παρατηρ"],
+  collisions: ["σύγκρου", "χτυπ", "επικίνδ", "χαος", "τρέχουν παντού", "ασφάλ"],
+  localVision: ["βλέπ", "οπτικ", "επαφή", "συντον", "ρυθμ", "μαζί"],
+  constraints: ["περιορισ", "κανόν", "χώρος", "ρόλος", "ζών", "όριο", "διαδρομ"],
+  noElim: ["χωρίς αποκλεισ", "κανείς έξω", "κανείς δεν βγα", "συμμετέχουν όλοι"],
+  elimBad: ["βγαίνει έξω", "αποβάλλ", "αποκλεισμ", "τιμωρ", "κάθε λάθος έξω"],
+  taskAsQuestion: ["πώς", "με ποιον τρόπο", "τι καλούνται", "να λύσουν", "πρόβλημα", "ερώτημα"],
+  proposeSpaceChange: ["ζών", "μικραίν", "χωρίζ", "διαδρομ", "στεν", "όριο", "ροή"],
+  proposeRule: ["κανόν", "ρόλος", "εναλλαγ", "δεν μπορεί", "υποχρεω", "αλλάζει ρόλο"],
+};
+
+function norm(s){
+  return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+function hasAny(text, arr){
+  const t = norm(text);
+  return arr.some(k => t.includes(norm(k)));
+}
+function countHits(text, families){
+  let hits = {};
+  for(const [k, arr] of Object.entries(families)){
+    hits[k] = hasAny(text, arr);
+  }
+  return hits;
+}
+
+function buildScenario(state){
+  // Simple deterministic scenario narrative
+  const n = state.n;
+  const age = state.age;
+  const space = state.space;
+  const equip = state.equip;
+  const goal = state.goal;
+  const c = state.constraints;
+
+  const ageTxt = (age==="primary") ? "Δημοτικό" : (age==="gymnasium") ? "Γυμνάσιο" : "Λύκειο";
+  const spaceTxt = ({
+    open_big:"μεγάλο ανοιχτό προαύλιο",
+    open_small:"μικρό ανοιχτό προαύλιο",
+    corridor:"στενή ζώνη/διάδρομος",
+    zoned:"χώρος χωρισμένος σε 2–3 ζώνες"
+  })[space];
+
+  const equipTxt = ({
+    none:"χωρίς εξοπλισμό",
+    one_ball:"1 μπάλα",
+    two_balls:"2 μπάλες",
+    cones:"κώνοι/σημάδια"
+  })[equip];
+
+  const consTxt = c.length ? c.map(x => ({
+    no_running:"χωρίς τρέξιμο",
+    no_talking:"χωρίς ομιλία",
+    no_elimination:"χωρίς αποκλεισμό",
+    arrive_together:"να φτάσουν όλοι μαζί",
+    no_leader:"χωρίς αρχηγό"
+  })[x]).join(", ") : "κανέναν ειδικό περιορισμό";
+
+  // Axis-specific question prompt
+  let prompt = "";
+  if(state.axis==="m1"){
+    prompt = `Ερώτηση: Διατύπωσε το <b>κινητικό πρόβλημα</b> με 1–2 προτάσεις (σαν ερώτημα). Τι καλούνται να “λύσουν” με το σώμα τους;`;
+  } else if(state.axis==="m2"){
+    prompt = `Ερώτηση: Κάνε <b>πρόβλεψη συμπεριφοράς</b>. Τι είναι πιθανό να συμβεί σε αυτόν τον χώρο, με αυτά τα παιδιά/εξοπλισμό, αν ξεκινήσει η δραστηριότητα;`;
+  } else {
+    prompt = `Ερώτηση: Πρότεινε <b>έναν κανόνα/παρέμβαση</b> που οργανώνει την ομάδα χωρίς να αποκλείει παιδιά. Εξήγησε γιατί θα βοηθήσει.`;
   }
 
-  function renderPrompt(){
-    const axis = axisEl.value;
-    const scenarioId = scenarioEl.value;
-    const s = MiniLLM.getScenario(axis, scenarioId);
-    promptText.textContent = s.prompt;
-    answerEl.value = "";
-    clearOutput();
+  return `
+    <div class="muted">
+      <span class="tag mono">${state.axis.toUpperCase()}</span>
+      <span class="tag mono">${ageTxt}</span>
+      <span class="tag mono">${n} μαθητές</span>
+      <span class="tag mono">${equipTxt}</span>
+      <span class="tag mono">${spaceTxt}</span>
+    </div>
+    <div style="margin-top:10px; line-height:1.45;">
+      <b>Σενάριο:</b> Έχεις ${n} μαθητές (${ageTxt}) σε ${spaceTxt}, ${equipTxt}. Στόχος: <b>${goal}</b>.
+      Περιορισμοί: <b>${consTxt}</b>.
+    </div>
+    <div style="margin-top:10px;">${prompt}</div>
+  `;
+}
+
+function rubricForAxis(axis){
+  // Each criterion is 0/1/2 with deterministic checks
+  if(axis==="m1"){
+    return [
+      {name:"Ως ερώτημα (problem framing)", max:2,
+       check:(t,h)=> (hasAny(t, KEY.taskAsQuestion) ? 2 : 0),
+       tip:"Διατύπωσέ το σαν ερώτημα: «Πώς μπορούν…;»"},
+      {name:"Αναφορά σε περιορισμούς/στόχο", max:2,
+       check:(t,h)=> (hasAny(t, KEY.constraints) || t.includes("χωρίς") ? 2 : 0),
+       tip:"Βάλε τους βασικούς περιορισμούς ή τον στόχο μέσα στη διατύπωση."},
+      {name:"Όχι ‘άσκηση’, αλλά ‘πρόβλημα’", max:2,
+       check:(t,h)=> (t.includes("να λύσουν") || t.includes("πρόβλημα") ? 2 : 1),
+       tip:"Μην περιγράφεις δραστηριότητα τύπου «παίζουμε…». Περιέγραψε τι πρέπει να λυθεί."},
+      {name:"Σαφήνεια (1–2 προτάσεις)", max:2,
+       check:(t,h)=> (t.length < 260 ? 2 : 1),
+       tip:"Κράτα το σύντομο και καθαρό."},
+      {name:"Αποφεύγει αξιολογικούς όρους", max:2,
+       check:(t,h)=> (t.includes("σωστό") || t.includes("λάθος") ? 0 : 2),
+       tip:"Μη μιλάς για «σωστό/λάθος» — μιλάς για λύσεις."},
+    ];
   }
 
-  function clearOutput(){
-    scoreBadge.textContent = "—";
-    scoreText.textContent = "—";
-    summaryEl.textContent = "—";
-    goodEl.textContent = "—";
-    missingEl.textContent = "—";
-    traceEl.innerHTML = "—";
-    statusEl.textContent = "";
+  if(axis==="m2"){
+    return [
+      {name:"Σύνδεση χώρου → συμπεριφορά", max:2,
+       check:(t,h)=> (hasAny(t, KEY.proposeSpaceChange) || hasAny(t, KEY.constraints) ? 2 : 1),
+       tip:"Δείξε ότι καταλαβαίνεις πως ο χώρος/ροές/όρια παράγουν συμπεριφορά."},
+      {name:"Αναγνώριση dominance / περιθωρίου", max:2,
+       check:(t,h)=> ((h.dominance && h.periphery) ? 2 : (h.dominance || h.periphery) ? 1 : 0),
+       tip:"Ποιοι θα κυριαρχήσουν; Ποιοι θα χαθούν;"},
+      {name:"Αναγνώριση ρίσκου/ασφάλειας", max:2,
+       check:(t,h)=> (h.collisions ? 2 : 0),
+       tip:"Σε ανοιχτό χώρο + μπάλα + πολλοί μαθητές, συχνά εμφανίζονται ταχύτητα/συγκρούσεις."},
+      {name:"Περιγράφει πιθανά μοτίβα, όχι λύσεις", max:2,
+       check:(t,h)=> (t.includes("θα") ? 2 : 1),
+       tip:"Μίλα για πιθανότητες: «είναι πιθανό να…»"},
+      {name:"Αποφεύγει αποκλεισμό/τιμωρία", max:2,
+       check:(t,h)=> (h.elimBad ? 0 : 2),
+       tip:"Μην προτείνεις ‘βγαίνει έξω’ ως μηχανισμό."},
+    ];
   }
 
-  function renderTrace(trace){
-    const lines = trace.map(t => {
-      const cls = t.level === "OK" ? "ok" : (t.level === "PARTIAL" ? "warn" : "bad");
-      return `<div style="margin:6px 0">
-        <span class="tag ${cls}">${t.level}</span>
-        <b style="color:var(--text)">${t.criterion}</b><br/>
-        <span style="color:var(--muted)">${t.note}</span>
-      </div>`;
-    }).join("");
-    traceEl.innerHTML = lines || "—";
-  }
+  // m3
+  return [
+    {name:"Προτείνει 1 σαφή κανόνα", max:2,
+     check:(t,h)=> (h.proposeRule ? 2 : 0),
+     tip:"Δώσε έναν κανόνα τύπου «δεν μπορείς…» / «αλλάζει ρόλο όταν…»"},
+    {name:"Ο κανόνας οργανώνει συμμετοχή", max:2,
+     check:(t,h)=> (h.noElim || !h.elimBad ? 2 : 0),
+     tip:"Ο κανόνας πρέπει να κρατά όλους μέσα."},
+    {name:"Στόχευση ρόλων/κυριαρχίας", max:2,
+     check:(t,h)=> ((h.dominance || h.periphery) ? 2 : 1),
+     tip:"Δείξε ότι καταλαβαίνεις ποιο μοτίβο θες να διορθώσεις (κυριαρχία/περιθώριο)."},
+    {name:"Αιτιολόγηση: γιατί θα δουλέψει", max:2,
+     check:(t,h)=> (t.includes("γιατί") || t.includes("ώστε") ? 2 : 1),
+     tip:"Μια πρόταση αιτιολόγησης αρκεί."},
+    {name:"Αποφεύγει τιμωρητικούς μηχανισμούς", max:2,
+     check:(t,h)=> (h.elimBad ? 0 : 2),
+     tip:"Απέφυγε ‘όποιος κάνει λάθος βγαίνει’."},
+  ];
+}
 
-  document.getElementById('gradeBtn').addEventListener('click', () => {
-    const axis = axisEl.value;
-    const scenarioId = scenarioEl.value;
-    const text = answerEl.value.trim();
-
-    if (text.length < 12){
-      statusEl.textContent = "Γράψε λίγο πιο αναλυτικά (τουλάχιστον 2–3 προτάσεις).";
-      return;
-    }
-    statusEl.textContent = "Αξιολόγηση…";
-
-    const out = MiniLLM.grade(axis, scenarioId, text);
-
-    scoreBadge.textContent = out.score + "/10";
-    scoreText.textContent = out.score.toFixed(1);
-    summaryEl.textContent = out.summary;
-    goodEl.textContent = out.good.join(" • ") || "—";
-    missingEl.textContent = out.missing.join(" • ") || "—";
-    renderTrace(out.trace);
-
-    statusEl.textContent = "Έτοιμο.";
+function grade(axis, answer){
+  const t = norm(answer);
+  const hits = countHits(t, KEY);
+  const rubric = rubricForAxis(axis);
+  let total=0, max=0;
+  const breakdown = rubric.map(r=>{
+    const s = r.check(t, hits);
+    total += s; max += r.max;
+    return {name:r.name, score:s, max:r.max, tip:r.tip};
   });
 
-  document.getElementById('hintBtn').addEventListener('click', () => {
-    const axis = axisEl.value;
-    const scenarioId = scenarioEl.value;
-    const hint = MiniLLM.hint(axis, scenarioId);
-    answerEl.value = hint;
+  // label
+  const pct = Math.round((total/max)*100);
+  let label = (pct>=80) ? {txt:"Ισχυρό", cls:"ok"} : (pct>=55) ? {txt:"Καλό/Μέτριο", cls:"warn"} : {txt:"Ανεπαρκές", cls:"bad"};
+
+  // assistant style feedback (template)
+  const strengths = [];
+  const gaps = [];
+  breakdown.forEach(b=>{
+    if(b.score === b.max) strengths.push(b.name);
+    else gaps.push(b);
   });
 
-  document.getElementById('resetBtn').addEventListener('click', () => {
-    answerEl.value = "";
-    clearOutput();
-  });
+  const assistant = buildAssistantFeedback(axis, hits, strengths, gaps, pct);
 
-  axisEl.addEventListener('change', loadScenarios);
-  scenarioEl.addEventListener('change', renderPrompt);
+  return {total, max, pct, label, breakdown, assistant};
+}
 
-  // init
-  loadScenarios();
+function buildAssistantFeedback(axis, hits, strengths, gaps, pct){
+  const axisName = axis==="m1" ? "Κινητικό Πρόβλημα" : axis==="m2" ? "Χώρος ως Σύστημα" : "Κανόνες & Ρόλοι";
+
+  const s1 = strengths.length
+    ? `✅ Τι έκανες καλά (${axisName}): <ul class="list">${strengths.map(x=>`<li>${x}</li>`).join("")}</ul>`
+    : `✅ Σημείο εκκίνησης: έχεις βάση, αλλά λείπουν ρητά στοιχεία για να “δέσει” η απάντηση.`;
+
+  const g1 = gaps.length
+    ? `🔧 Τι να βελτιώσεις (2 κινήσεις): <ul class="list">${
+        gaps.slice(0,2).map(g=>`<li><b>${g.name}:</b> ${g.tip}</li>`).join("")
+      }</ul>`
+    : `🔧 Μικρή βελτίωση: κάν’ το λίγο πιο συγκεκριμένο (ένα παράδειγμα/μια φράση).`;
+
+  // axis-specific hints
+  let hint = "";
+  if(axis==="m1"){
+    hint = `Hint: γράψε το σαν «Πώς μπορούν οι μαθητές να … <i>υπό αυτούς τους περιορισμούς</i>;»`;
+  } else if(axis==="m2"){
+    hint = `Hint: ξεκίνα με «Σε αυτόν τον χώρο είναι πιθανό να εμφανιστεί…» και σύνδεσε χώρο→συμπεριφορά.`;
+  } else {
+    hint = `Hint: πρότεινε έναν κανόνα που αλλάζει ρόλους/ροή, χωρίς “βγαίνει έξω”.`;
+  }
+
+  return `
+    <div class="muted">
+      <span class="tag mono">${axis.toUpperCase()}</span>
+      <span class="tag mono">score=${pct}%</span>
+      <span class="tag mono">${axisName}</span>
+    </div>
+    <div style="margin-top:10px;">
+      ${s1}
+      <div class="hr"></div>
+      ${g1}
+      <div class="hr"></div>
+      <div class="small">${hint}</div>
+    </div>
+  `;
+}
+
+function showRubric(axis){
+  const rubric = rubricForAxis(axis);
+  return `
+    <div class="muted"><b>Rubric (${axis.toUpperCase()})</b></div>
+    <ul class="list">
+      ${rubric.map(r=>`<li><span class="mono">${r.max}pt</span> — ${r.name} <span class="small">(${r.tip})</span></li>`).join("")}
+    </ul>
+    <div class="small">Σημείωση: Το rubric είναι η “πηγή αλήθειας”. Το feedback είναι απλώς επεξηγηματικό.</div>
+  `;
+}
+
+function randomHint(axis, state){
+  if(axis==="m1"){
+    return `Δοκίμασε: «Πώς μπορούν ${state.n} μαθητές να πετύχουν τον στόχο (${state.goal}) με περιορισμούς (${state.constraints.length || "κανέναν"}) χωρίς να τους δείξω λύση;»`;
+  }
+  if(axis==="m2"){
+    return `Δοκίμασε να προβλέψεις: (α) ποιος θα κυριαρχήσει, (β) ποιος θα αποσυρθεί, (γ) ποιο ρίσκο προκύπτει (π.χ. ταχύτητα/συγκρούσεις).`;
+  }
+  return `Δοκίμασε κανόνα “εναλλαγής ρόλων”: «μόλις συμβεί Χ, αλλάζεις ρόλο» ή κανόνα “διασποράς”: «δεν μπορείς να στοχεύσεις το ίδιο άτομο 2 φορές».`;
+}
+
+// UI state
+let STATE = null;
+
+function getStateFromUI(){
+  const axis = $("axisSel").value;
+  const age = $("ageSel").value;
+  const n = parseInt($("nInput").value || "22", 10);
+  const space = $("spaceSel").value;
+  const equip = $("equipSel").value;
+  const goal = $("goalInput").value.trim() || "συνεργασία";
+  const constraints = Array.from($("constraintSel").selectedOptions).map(o=>o.value);
+
+  return {axis, age, n, space, equip, goal, constraints};
+}
+
+function setScenario(){
+  STATE = getStateFromUI();
+  $("scenarioBox").innerHTML = buildScenario(STATE);
+  $("feedbackBox").innerHTML = `<div class="muted">Γράψε απάντηση και πάτα <b>Βαθμολόγηση</b>.</div>`;
+  $("kpiBox").innerHTML = `
+    <span class="pill">Άξονας: <b>${STATE.axis.toUpperCase()}</b></span>
+    <span class="pill">Constraints: <b>${STATE.constraints.length}</b></span>
+    <span class="pill">Mode: <b class="mono">LLM-free</b></span>
+  `;
+}
+
+function resetAll(){
+  $("answerTA").value = "";
+  setScenario();
+}
+
+$("newBtn").addEventListener("click", ()=> setScenario());
+$("resetBtn").addEventListener("click", ()=> resetAll());
+
+$("hintBtn").addEventListener("click", ()=>{
+  if(!STATE) setScenario();
+  const h = randomHint(STATE.axis, STATE);
+  $("feedbackBox").innerHTML = `<div class="muted"><b>Hint:</b> ${h}</div>`;
+});
+
+$("showRubricBtn").addEventListener("click", ()=>{
+  if(!STATE) setScenario();
+  $("feedbackBox").innerHTML = showRubric(STATE.axis);
+});
+
+$("gradeBtn").addEventListener("click", ()=>{
+  if(!STATE) setScenario();
+  const ans = $("answerTA").value || "";
+  const res = grade(STATE.axis, ans);
+
+  $("kpiBox").innerHTML = `
+    <span class="pill">Σκορ: <b class="score ${res.label.cls}">${res.pct}%</b></span>
+    <span class="pill">Επίπεδο: <b class="${res.label.cls}">${res.label.txt}</b></span>
+    <span class="pill">Σύνολο: <b class="mono">${res.total}/${res.max}</b></span>
+  `;
+
+  const breakdownHtml = `
+    <div class="muted"><b>Ανάλυση βαθμολόγησης</b></div>
+    <ul class="list">
+      ${res.breakdown.map(b=>`<li>${b.name}: <span class="mono">${b.score}/${b.max}</span></li>`).join("")}
+    </ul>
+  `;
+
+  $("feedbackBox").innerHTML = res.assistant + `<div class="hr"></div>` + breakdownHtml;
+});
+
+// init
+setScenario();
 </script>
 </body>
 </html>
